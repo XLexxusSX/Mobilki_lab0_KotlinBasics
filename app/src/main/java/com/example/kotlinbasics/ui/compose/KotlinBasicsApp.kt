@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
 
 private enum class Screen {
     Menu, Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10
@@ -130,22 +132,94 @@ private fun Task1Screen(onBack: () -> Unit) {
 @Composable
 private fun Task2Screen(onBack: () -> Unit) {
     var input by remember { mutableStateOf("") }
-    val numbers = remember { mutableStateListOf<Int>() }
+
+    var count by remember { mutableStateOf(0) }
+    var sum by remember { mutableStateOf(0.0) }
+    var isFinished by remember { mutableStateOf(false) }
+    var enteredNumbersText by remember { mutableStateOf("") }
+
+    val average = if (count == 0) 0.0 else sum / count
+    val formattedSum = String.format(java.util.Locale.US, "%.3f", sum)
+    val formattedAverage = String.format(java.util.Locale.US, "%.3f", average)
+
+    fun processInput() {
+        val value = input.replace(",", ".").toDoubleOrNull()
+
+        if (value != null && !isFinished) {
+            if (value == 0.0) {
+                isFinished = true
+            } else {
+                count += 1
+                sum += value
+
+                enteredNumbersText = if (enteredNumbersText.isEmpty()) {
+                    value.toString()
+                } else {
+                    "$enteredNumbersText, $value"
+                }
+            }
+        }
+
+        input = ""
+    }
+
     ScreenColumn {
         BackButton(onBack)
+
         Text("Задание 2", style = MaterialTheme.typography.headlineSmall)
-        Text("Вводите числа по одному. Число 0 завершает ввод.")
-        NumberField("Очередное число", input) { input = it }
-        AppButton("Добавить") {
-            val value = input.toIntOrNull()
-            if (value != null && value != 0) numbers.add(value)
-            input = ""
+
+        Text(
+            "Пользователь вводит числа по одному. После каждого числа нужно нажать Enter. " +
+                    "Ввод продолжается до тех пор, пока не будет введено число 0."
+        )
+
+        OutlinedTextField(
+            value = input,
+            onValueChange = { input = it },
+            label = { Text("Введите число") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !isFinished,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    processInput()
+                }
+            )
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (!isFinished) {
+            Text("Нажмите Enter после ввода каждого числа.")
+        } else {
+            Text("Ввод завершён, так как было введено число 0.")
         }
-        val sum = numbers.sum()
-        val average = if (numbers.isEmpty()) 0.0 else numbers.average()
-        Text("Количество: ${numbers.size}")
-        Text("Сумма: $sum")
-        Text("Среднее: $average")
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Введённые числа: ${
+                if (enteredNumbersText.isEmpty()) "пока нет" else enteredNumbersText
+            }"
+        )
+
+        Text("Количество введённых чисел: $count")
+        Text("Общая сумма: $formattedSum")
+        Text("Среднее арифметическое: $formattedAverage")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AppButton("Заново") {
+            input = ""
+            count = 0
+            sum = 0.0
+            isFinished = false
+            enteredNumbersText = ""
+        }
     }
 }
 
